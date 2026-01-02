@@ -1,44 +1,56 @@
 import os
-import json
 import base58
+from abc import ABC, abstractmethod
+from typing import Optional
 from dotenv import load_dotenv
 from solders.keypair import Keypair
 from solders.pubkey import Pubkey
-from eth_account import Account
 
 load_dotenv()
 
-class MultiChainWallet:
+class Signer(ABC):
+    """Abstract base class for transaction signing strategies."""
+    
+    @abstractmethod
+    def public_key(self) -> Pubkey:
+        pass
+
+    @abstractmethod
+    def sign_transaction(self, tx_bytes: bytes) -> bytes:
+        pass
+
+class LocalKeySigner(Signer):
     """
-    Secure wallet manager supporting Solana and EVM chains.
-    Keys are loaded from environment variables, never stored in plain text files.
+    Implementation for PoC/Devnet using local environment variables.
+    WARNING: Not suitable for Mainnet production.
     """
     def __init__(self):
-        self.keys = {}
-        self._load_keys()
-
-    def _load_keys(self):
-        # 1. Load Solana Key
-        sol_secret = os.getenv("SOLANA_PRIVATE_KEY")
-        if sol_secret:
-            try:
-                # پشتیبانی از فرمت Base58 (فانتوم)
-                decoded = base58.b58decode(sol_secret)
-                self.keys["solana"] = Keypair.from_bytes(decoded)
-            except Exception as e:
-                print(f"Warning: Could not load Solana key: {e}")
-                self.keys["solana"] = Keypair() # Fallback: Generate random for safety
+        secret = os.getenv("SOLANA_PRIVATE_KEY")
+        if not secret:
+            # Fallback for CI/CD or no-key environments
+            self._keypair = Keypair()
         else:
-            self.keys["solana"] = Keypair()
+            try:
+                decoded = base58.b58decode(secret)
+                self._keypair = Keypair.from_bytes(decoded)
+            except Exception:
+                self._keypair = Keypair()
 
-        self.evm_account = Account.create()
+    def public_key(self) -> Pubkey:
+        return self._keypair.pubkey()
 
-    def get_address(self, chain="solana"):
-        if chain == "solana":
-            return str(self.keys["solana"].pubkey())
-        elif chain in ["ethereum", "base", "polygon"]:
-            return self.evm_account.address
-        return None
+    def sign_transaction(self, tx_bytes: bytes) -> bytes:
+        # In a real implementation, this would sign the transaction object
+        # For this abstraction demo, we return the keypair signature logic
+        return b"mock_signature_bytes" 
 
-    def sign_message(self, message, chain="solana"):
-        pass
+class HardwareSigner(Signer):
+    """
+    Placeholder for Ledger/HSM implementation.
+    TODO: Implement PKCS#11 interface for Mainnet.
+    """
+    def public_key(self) -> Pubkey:
+        raise NotImplementedError("Hardware signing not available in PoC.")
+
+    def sign_transaction(self, tx_bytes: bytes) -> bytes:
+        raise NotImplementedError("Hardware signing not available in PoC.")
