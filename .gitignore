@@ -1,0 +1,9 @@
+id.json
+.env
+.venv
+__pycache__/
+*.pyc
+solana-release/
+*.tar.bz2
+*.tgz
+scripts/

@@ -1,0 +1,16 @@
+# Python junk
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environment variables (Secrets)
+.env
+.env.local
+
+# Virtual Environments
+venv/
+env/
+
+# IDE settings
+.vscode/
+.idea/
